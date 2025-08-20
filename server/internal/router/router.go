@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"server/internal/handlers"
 
+	mw "server/internal/middleware"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -15,14 +17,17 @@ func InitRouter(hubHandler *handlers.HubHandler, userHandler *handlers.UserHandl
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	r.Post("/ws/rooms", hubHandler.CreateRoom)
-	r.Get("/ws/rooms", hubHandler.GetRooms)
-	r.Get("/ws/rooms/{roomId}/clients", hubHandler.GetClients)
-	r.Get("/ws/{roomId}", hubHandler.JoinRoom)
-
 	r.Post("/register", userHandler.Register)
 	r.Post("/login", userHandler.Login)
 	r.Get("/logout", userHandler.Logout)
+
+	r.Route("/ws", func(r chi.Router) {
+		r.Use(mw.AuthMiddleware)
+		r.Post("/rooms", hubHandler.CreateRoom)
+		r.Get("/rooms", hubHandler.GetRooms)
+		r.Get("/rooms/{roomId}/clients", hubHandler.GetClients)
+		r.Get("/{roomId}", hubHandler.JoinRoom)
+	})
 
 	return r
 }
